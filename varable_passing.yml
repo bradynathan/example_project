@@ -1,12 +1,17 @@
 ---
 # This playbook is for passing extra_vars
 # pass the variables in the debug statements
-- hosts: all
+# ansible-playbook -l localhost varable_passing.yml --extra-vars "variable_one=hi variable_two=ho"
+- hosts: all,localhost
   tasks:
     - name: Outputing the value of variable_one
       debug:
         var: variable_one
+      become: False
+      delegate_to: localhost
 
     - name: Outputing the value of variable_two
       debug:
         var: variable_two
+      become: False
+      delegate_to: localhost
