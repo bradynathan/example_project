@@ -1,0 +1,12 @@
+---
+# This playbook is for passing extra_vars
+# pass the variables in the debug statements
+- hosts: all
+  tasks:
+    - name: Outputing the value of variable_one
+      debug:
+        var: variable_one
+
+    - name: Outputing the value of variable_two
+      debug:
+        var: variable_two
