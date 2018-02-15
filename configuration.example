@@ -1,0 +1,6 @@
+# Copy this file to configuration.ini
+# Update the parameters
+[tower]
+user=
+password=
+server=
