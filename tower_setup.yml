@@ -1,0 +1,105 @@
+---
+# This playbook add this project to tower
+- hosts: all,localhost
+  gather_facts: False
+  vars:
+  tasks:
+  - set_fact:
+      tower_user: "{{ lookup('ini', 'user section=tower file=configuration.ini') }}"
+      tower_password: "{{ lookup('ini', 'password section=tower file=configuration.ini') }}"
+      tower_server: "{{ lookup('ini', 'server section=tower file=configuration.ini') }}"
+  - name: Get API Token
+    uri:
+      url: https://{{ tower_server }}/api/v2/authtoken/
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{ "username": "{{ tower_user }}","password": "{{ tower_password }}" }'
+      body_format: json
+      validate_certs: False
+    register: authtoken
+
+  - name: Add the project
+    uri:
+      url: https://{{ tower_server }}/api/v2/projects/
+      method: POST
+      headers:
+        Content-Type: application/json
+        Authorization: "Token {{ authtoken.json.token }}"
+      body: '{"name": "Example Project","description": "Just some example playbooks here","scm_type": "git","scm_url": "https://github.com/bradynathan/example_project","scm_branch": "","scm_clean": false,"scm_delete_on_update": false,"credential": null,"timeout": 0,"organization": null,"scm_update_on_launch": false,"scm_update_cache_timeout": 0 }'
+      body_format: json
+      validate_certs: False
+    register: project_output
+    changed_when: project_output.status == '201'
+    failed_when: False
+
+  - name: Get list of projects
+    uri:
+      url: https://{{ tower_server }}/api/v2/projects/
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Token {{ authtoken.json.token }}"
+      validate_certs: False
+    register: project_output
+
+  - name: Find the project id
+    set_fact:
+      example_project_id: "{{ item.id }}"
+    when: item.name | search("Example Project")
+    with_items:
+      - "{{ project_output.json.results }}"
+
+  - debug:
+      var: example_project_id
+
+  - name: Add a template for variable passing
+    uri:
+      url: https://{{ tower_server }}/api/v2/job_templates/
+      method: POST
+      headers:
+        Content-Type: application/json
+        Authorization: "Token {{ authtoken.json.token }}"
+      body: >
+        {
+        "name": "Variable passing",
+        "description": "This template is to test passing varables through API",
+        "job_type": "run",
+        "inventory": 1,
+        "project": {{ example_project_id }},
+        "playbook": "variable_passing.yml",
+        "credential": 1,
+        "vault_credential": null,
+        "forks": 0,
+        "limit": "",
+        "verbosity": 0,
+        "extra_vars": "",
+        "job_tags": "",
+        "force_handlers": false,
+        "skip_tags": "",
+        "start_at_task": "",
+        "timeout": 0,
+        "use_fact_cache": false,
+        "host_config_key": "",
+        "ask_diff_mode_on_launch": false,
+        "ask_variables_on_launch": true,
+        "ask_limit_on_launch": false,
+        "ask_tags_on_launch": false,
+        "ask_skip_tags_on_launch": false,
+        "ask_job_type_on_launch": false,
+        "ask_verbosity_on_launch": false,
+        "ask_inventory_on_launch": false,
+        "ask_credential_on_launch": false,
+        "survey_enabled": false,
+        "become_enabled": false,
+        "diff_mode": false,
+        "allow_simultaneous": false
+        }
+      body_format: json
+      validate_certs: False
+    register: template_output
+    changed_when: template_output.status == '201'
+    failed_when: False
+
+  - debug:
+      var: template_output
