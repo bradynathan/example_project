@@ -1,0 +1,64 @@
+---
+# This playbook add this project to tower
+- hosts: all,localhost
+  gather_facts: False
+  vars:
+    extra_vars: "variable_one=hi variable_two=ho"
+  tasks:
+  - set_fact:
+      tower_user: "{{ lookup('ini', 'user section=tower file=configuration.ini') }}"
+      tower_password: "{{ lookup('ini', 'password section=tower file=configuration.ini') }}"
+      tower_server: "{{ lookup('ini', 'server section=tower file=configuration.ini') }}"
+  - name: Get API Token
+    uri:
+      url: https://{{ tower_server }}/api/v2/authtoken/
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{ "username": "{{ tower_user }}","password": "{{ tower_password }}" }'
+      body_format: json
+      validate_certs: False
+    register: authtoken
+
+  - name: Get list of templates
+    uri:
+      url: https://{{ tower_server }}/api/v2/job_templates/
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Token {{ authtoken.json.token }}"
+      validate_certs: False
+    register: job_templates_output
+
+  - name: Find the job_template id
+    set_fact:
+      variable_passing_template_id: "{{ item.id }}"
+    when: item.name | search("Variable passing")
+    with_items:
+      - "{{ job_templates_output.json.results }}"
+
+  - debug:
+      var: variable_passing_template_id
+
+  - name: Launch the Variable passing template
+    uri:
+      url: https://{{ tower_server }}/api/v2/job_templates/{{ variable_passing_template_id }}/launch/
+      method: POST
+      headers:
+        Content-Type: application/json
+        Authorization: "Token {{ authtoken.json.token }}"
+      body: >
+          {
+            "extra_vars": {
+              "variable_one": "hi",
+              "variable_two": "ho"
+             }
+          }
+      body_format: json
+      validate_certs: False
+    register: template_output
+    changed_when: template_output.status == '201'
+    failed_when: False
+
+  - debug:
+      var: template_output
