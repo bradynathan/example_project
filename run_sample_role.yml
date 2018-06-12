@@ -1,0 +1,4 @@
+- hosts: all,localhost
+  gather_facts: True
+  roles:
+    - sample_role

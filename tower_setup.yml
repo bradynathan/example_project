@@ -32,7 +32,10 @@
     register: project_output
     changed_when: project_output.status == '201'
     failed_when: False
-
+    
+  - name: Pausing to allow project sync
+    pause:
+      seconds: 45
   - name: Get list of projects
     uri:
       url: https://{{ tower_server }}/api/v2/projects/

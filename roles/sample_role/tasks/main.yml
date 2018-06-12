@@ -1,0 +1,6 @@
+---
+# tasks file for sample_role
+- name: Install Country in home
+  template:
+    src: constitution.j2
+    dest: ~/constitution

@@ -30,6 +30,9 @@
       validate_certs: False
     register: job_templates_output
 
+  - debug:
+      var: job_templates_output
+
   - name: Find the job_template id
     set_fact:
       variable_passing_template_id: "{{ item.id }}"
